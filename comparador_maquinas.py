@@ -588,7 +588,7 @@ def show_carnevalli():
 # =====================================================================
 # MÓDULO 3 - CONTAS PARA IMPORTAÇÃO (VERSÃO INICIAL)
 # =====================================================================
-def show_impdef show_importacao():
+def show_importacao():
     show_top_menu()
     st.title("Contas para Importação de Máquinas")
 
@@ -632,7 +632,7 @@ Preencha os campos abaixo para estimar o **custo total da máquina importada no 
 
     valor_aduaneiro = fob_brl + frete_brl
 
-    def calcula_cenario(ii_aliquota: float):
+    def calcula_cenario(ii_aliquota):
         valor_ii = valor_aduaneiro * (ii_aliquota / 100.0)
         base_ipi = valor_aduaneiro + valor_ii
         valor_ipi = base_ipi * (ipi / 100.0)
@@ -740,7 +740,7 @@ Preencha os campos abaixo para estimar o **custo total da máquina importada no 
     with col_e2:
         st.markdown(f"Se **ICMS é recuperável**: economia ≈ **R$ {economia_icms_rec:,.2f}**")
 
-    st.caption("Obs.: A economia em 'ICMS recuperável' tende a ser igual ao próprio II que deixou de ser pago, como mostrado na sua tabela original.")II que deixou de ser pago (quando a base é o VA), como mostrado na sua tabela.")
+    st.caption("Obs.: A economia em 'ICMS recuperável' tende a ser igual ao próprio II que deixou de ser pago.")
 # =====================================================================
 # ROTEAMENTO ENTRE PÁGINAS
 # =====================================================================
