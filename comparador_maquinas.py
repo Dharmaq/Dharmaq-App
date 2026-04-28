@@ -595,79 +595,168 @@ def show_importacao():
     st.markdown("""
 Preencha os campos abaixo para estimar o **custo total da máquina importada no Brasil**, considerando:
 
-- Preço da máquina em Euro (EXW)
-- Frete + seguro internacional
+- Preço da máquina em Euro (FOB / EXW)
+- Frete + seguro internacional (como % do FOB ou valor em R$)
 - Alíquota de impostos
 - Taxa de câmbio Euro → Real
 
-Essa é uma **versão inicial**. Depois, quando você enviar a planilha específica, refinamos as fórmulas.
+O modelo segue a mesma lógica da sua tabela:
+- Cenário **Sem Ex-tarifário** (II > 0)
+- Cenário **Com Ex-tarifário** (II = 0)
+- Duas visões: **ICMS como custo** e **ICMS recuperável**.
 """)
 
-    col1, col2 = st.columns(2)
+    st.markdown("### Parâmetros Gerais")
+
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-        exw_eur = st.number_input("Preço EXW da máquina (Euro)", value=350000.0, step=5000.0)
-        frete_seguro_eur = st.number_input("Frete + Seguro internacional (Euro)", value=15000.0, step=1000.0)
-        outros_eur = st.number_input("Outros custos em Euro (despesas no exterior)", value=0.0, step=1000.0)
-
-        cambio = st.number_input("Câmbio Euro → Real (R$/€)", value=6.0, step=0.1)
+        fob_eur = st.number_input("Valor da máquina (FOB/EXW) em Euro", value=150_000.0, step=10_000.0, format="%.2f")
+        cambio = st.number_input("Câmbio Euro → Real (R$/€)", value=6.0, step=0.1, format="%.3f")
 
     with col2:
-        st.markdown("### Impostos (% sobre valor aduaneiro em R$)")
-        ii = st.number_input("Imposto de Importação (II) %", value=14.0, step=0.5)
-        ipi = st.number_input("IPI %", value=5.0, step=0.5)
-        pis = st.number_input("PIS %", value=2.0, step=0.1)
-        cofins = st.number_input("COFINS %", value=9.0, step=0.1)
-        icms = st.number_input("ICMS %", value=18.0, step=0.5)
+        frete_pct = st.number_input("Frete + seguro (% sobre FOB em R$)", value=5.0, step=0.5, format="%.2f")
+        usar_frete_manual = st.checkbox("Informar frete/seguro em R$ manualmente?")
+        frete_brl_manual = st.number_input("Frete + seguro (R$)", value=0.0, step=1_000.0, format="%.2f", disabled=not usar_frete_manual)
 
-    # Cálculos básicos
-    valor_mercadoria_eur = exw_eur + frete_seguro_eur + outros_eur
-    valor_mercadoria_brl = valor_mercadoria_eur * cambio
+    with col3:
+        st.markdown("#### Alíquotas de Impostos (%)")
+        ii_sem_ex = st.number_input("II (Sem Ex-tarifário)", value=14.0, step=0.5, format="%.2f")
+        ii_com_ex = st.number_input("II (Com Ex-tarifário)", value=0.0, step=0.5, format="%.2f")
+        ipi = st.number_input("IPI", value=0.0, step=0.5, format="%.2f")
+        pis = st.number_input("PIS-Importação", value=2.10, step=0.1, format="%.2f")
+        cofins = st.number_input("COFINS-Importação", value=10.65, step=0.1, format="%.2f")
+        icms = st.number_input("ICMS (por dentro)", value=18.0, step=0.5, format="%.2f")
 
-    base_ii = valor_mercadoria_brl
-    valor_ii = base_ii * (ii / 100.0)
+    # ---------------- Cálculos básicos ----------------
+    fob_brl = fob_eur * cambio
 
-    base_ipi = valor_mercadoria_brl + valor_ii
-    valor_ipi = base_ipi * (ipi / 100.0)
+    if usar_frete_manual and frete_brl_manual > 0:
+        frete_brl = frete_brl_manual
+    else:
+        frete_brl = fob_brl * (frete_pct / 100.0)
 
-    base_pis_cofins = valor_mercadoria_brl + valor_ii + valor_ipi
-    valor_pis = base_pis_cofins * (pis / 100.0)
-    valor_cofins = base_pis_cofins * (cofins / 100.0)
+    valor_aduaneiro = fob_brl + frete_brl  # VA
 
-    # ICMS (simplificado: base = tudo + ICMS, mas aqui vamos usar base sem gross-up,
-    # depois ajustamos com a planilha real)
-    base_icms = valor_mercadoria_brl + valor_ii + valor_ipi + valor_pis + valor_cofins
-    valor_icms = base_icms * (icms / 100.0)
+    def calcula_cenario(ii_aliquota: float):
+        # II
+        valor_ii = valor_aduaneiro * (ii_aliquota / 100.0)
+        # IPI
+        base_ipi = valor_aduaneiro + valor_ii
+        valor_ipi = base_ipi * (ipi / 100.0)
+        # PIS/COFINS
+        base_pis_cofins = valor_aduaneiro + valor_ii + valor_ipi
+        valor_pis = base_pis_cofins * (pis / 100.0)
+        valor_cofins = base_pis_cofins * (cofins / 100.0)
 
-    custo_total_brl = valor_mercadoria_brl + valor_ii + valor_ipi + valor_pis + valor_cofins + valor_icms
+        # ICMS por dentro (simplificado: base = VA + II + IPI + PIS + COFINS; gross-up ICMS)
+        base_icms = valor_aduaneiro + valor_ii + valor_ipi + valor_pis + valor_cofins
+        # gross-up: ICMS = base * (aliq / (100 - aliq))
+        aliquota_icms_frac = icms / 100.0
+        valor_icms = base_icms * (aliquota_icms_frac / (1 - aliquota_icms_frac))
 
-    st.markdown("## Resultado")
+        # Visão 1: ICMS como custo
+        custo_com_icms = valor_aduaneiro + valor_ii + valor_ipi + valor_pis + valor_cofins + valor_icms
+        # Visão 2: ICMS recuperável
+        custo_sem_icms = valor_aduaneiro + valor_ii + valor_ipi + valor_pis + valor_cofins
 
-    colr1, colr2 = st.columns(2)
-    with colr1:
-        st.markdown("### Valores em Euro")
-        st.write(f"- EXW máquina: **€ {exw_eur:,.2f}**")
-        st.write(f"- Frete + seguro: **€ {frete_seguro_eur:,.2f}**")
-        st.write(f"- Outros custos no exterior: **€ {outros_eur:,.2f}**")
-        st.write(f"- Total mercadoria + frete + outros: **€ {valor_mercadoria_eur:,.2f}**")
+        return {
+            "VA": valor_aduaneiro,
+            "II": valor_ii,
+            "IPI": valor_ipi,
+            "PIS": valor_pis,
+            "COFINS": valor_cofins,
+            "BASE_ICMS": base_icms,
+            "ICMS": valor_icms,
+            "CUSTO_COM_ICMS": custo_com_icms,
+            "CUSTO_SEM_ICMS": custo_sem_icms,
+        }
 
-    with colr2:
-        st.markdown("### Valores em Reais (R$)")
-        st.write(f"- Valor mercadoria (CIF) em R$: **R$ {valor_mercadoria_brl:,.2f}**")
-        st.write(f"- II: **R$ {valor_ii:,.2f}**")
-        st.write(f"- IPI: **R$ {valor_ipi:,.2f}**")
-        st.write(f"- PIS: **R$ {valor_pis:,.2f}**")
-        st.write(f"- COFINS: **R$ {valor_cofins:,.2f}**")
-        st.write(f"- ICMS (aprox.): **R$ {valor_icms:,.2f}**")
-        st.markdown(f"### **Custo total estimado Brasil (R$): `R$ {custo_total_brl:,.2f}`**")
+    # Cenário A: sem Ex-tarifário
+    cen_a = calcula_cenario(ii_sem_ex)
+    # Cenário B: com Ex-tarifário
+    cen_b = calcula_cenario(ii_com_ex)
 
-    with st.expander("Ver detalhes da base de cálculo (para conferir com a planilha depois)"):
-        st.write(f"Base II: R$ {base_ii:,.2f}")
-        st.write(f"Base IPI: R$ {base_ipi:,.2f}")
-        st.write(f"Base PIS/COFINS: R$ {base_pis_cofins:,.2f}")
-        st.write(f"Base ICMS (simplificada): R$ {base_icms:,.2f}")
-        st.info("Quando você enviar a planilha 'contas para importação', ajustamos as fórmulas para ficar idêntico ao seu modelo.")
+    # ---------------- Exibição ----------------
+    st.markdown("## A) Sem Ex-tarifário (II > 0)")
+    col_a1, col_a2 = st.columns([1, 2])
 
+    with col_a1:
+        st.markdown("### Dados básicos")
+        st.write(f"- Valor FOB (Euro): **€ {fob_eur:,.2f}**")
+        st.write(f"- Câmbio: **R$ {cambio:,.3f} / €**")
+        st.write(f"- FOB em R$: **R$ {fob_brl:,.2f}**")
+        st.write(f"- Frete + seguro (R$): **R$ {frete_brl:,.2f}**")
+        st.write(f"- Valor Aduaneiro (VA): **R$ {cen_a['VA']:,.2f}**")
+
+    with col_a2:
+        st.markdown("### Impostos e custo (Sem Ex)")
+        st.write(f"- II ({ii_sem_ex:.2f}% sobre VA): **R$ {cen_a['II']:,.2f}**")
+        st.write(f"- IPI ({ipi:.2f}%): **R$ {cen_a['IPI']:,.2f}**")
+        st.write(f"- PIS ({pis:.2f}% sobre VA+II+IPI): **R$ {cen_a['PIS']:,.2f}**")
+        st.write(f"- COFINS ({cofins:.2f}% sobre VA+II+IPI): **R$ {cen_a['COFINS']:,.2f}**")
+        st.write(f"- Base ICMS (simplificada): **R$ {cen_a['BASE_ICMS']:,.2f}**")
+        st.write(f"- ICMS ({icms:.2f}% por dentro): **R$ {cen_a['ICMS']:,.2f}**")
+
+        st.markdown("#### Visões de custo")
+        st.write(f"- **Custo total (ICMS como custo)**: R$ {cen_a['CUSTO_COM_ICMS']:,.2f}")
+        st.write(f"- **Custo efetivo (ICMS recuperável)**: R$ {cen_a['CUSTO_SEM_ICMS']:,.2f}")
+
+    st.markdown("---")
+    st.markdown("## B) Com Ex-tarifário (II = 0%)")
+
+    col_b1, col_b2 = st.columns([1, 2])
+
+    with col_b1:
+        st.markdown("### Dados básicos (iguais ao cenário A)")
+        st.write(f"- Valor FOB (Euro): **€ {fob_eur:,.2f}**")
+        st.write(f("- Valor Aduaneiro (VA): **R$ {cen_b['VA']:,.2f}**"))
+
+    with col_b2:
+        st.markdown("### Impostos e custo (Com Ex)")
+        st.write(f"- II ({ii_com_ex:.2f}% sobre VA): **R$ {cen_b['II']:,.2f}**")
+        st.write(f"- IPI ({ipi:.2f}%): **R$ {cen_b['IPI']:,.2f}**")
+        st.write(f("- PIS ({pis:.2f}%): **R$ {cen_b['PIS']:,.2f}**"))
+        st.write(f("- COFINS ({cofins:.2f}%): **R$ {cen_b['COFINS']:,.2f}**"))
+        st.write(f("- Base ICMS (simplificada): **R$ {cen_b['BASE_ICMS']:,.2f}**"))
+        st.write(f("- ICMS ({icms:.2f}% por dentro): **R$ {cen_b['ICMS']:,.2f}**"))
+
+        st.markdown("#### Visões de custo")
+        st.write(f"- **Custo total (ICMS como custo)**: R$ {cen_b['CUSTO_COM_ICMS']:,.2f}")
+        st.write(f("- **Custo efetivo (ICMS recuperável)**: R$ {cen_b['CUSTO_SEM_ICMS']:,.2f}"))
+
+    # ---------------- Resumo e economia ----------------
+    st.markdown("---")
+    st.markdown("## C) Resumo e Economia com Ex-tarifário")
+
+    resumo = {
+        "Cenário": [
+            "Sem Ex, ICMS como custo",
+            "Sem Ex, ICMS recuperável",
+            "Com Ex, ICMS como custo",
+            "Com Ex, ICMS recuperável",
+        ],
+        "Custo (R$)": [
+            cen_a["CUSTO_COM_ICMS"],
+            cen_a["CUSTO_SEM_ICMS"],
+            cen_b["CUSTO_COM_ICMS"],
+            cen_b["CUSTO_SEM_ICMS"],
+        ],
+    }
+    df_resumo = pd.DataFrame(resumo)
+    st.dataframe(df_resumo.style.format({"Custo (R$)": "R$ {:,.2f}"}), use_container_width=True)
+
+    economia_icms_custo = cen_a["CUSTO_COM_ICMS"] - cen_b["CUSTO_COM_ICMS"]
+    economia_icms_rec   = cen_a["CUSTO_SEM_ICMS"] - cen_b["CUSTO_SEM_ICMS"]
+
+    st.markdown("### Economia com Ex-tarifário")
+    col_e1, col_e2 = st.columns(2)
+    with col_e1:
+        st.write(f"- Se **ICMS é custo**: economia ≈ **R$ {economia_icms_custo:,.2f}**")
+    with col_e2:
+        st.write(f"- Se **ICMS é recuperável**: economia ≈ **R$ {economia_icms_rec:,.2f}**")
+
+    st.caption("Obs.: A economia em 'ICMS recuperável' tende a ser muito próxima ao próprio II que deixou de ser pago (quando a base é o VA), como mostrado na sua tabela.")
 # =====================================================================
 # ROTEAMENTO ENTRE PÁGINAS
 # =====================================================================
