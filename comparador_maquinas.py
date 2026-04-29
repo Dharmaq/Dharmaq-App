@@ -584,18 +584,15 @@ def show_carnevalli():
     show_top_menu()
 
     st.markdown("""
-    <div style="margin-bottom: 15px;">
-        <h1 style="margin-bottom: 0;">⚙️ Carnevalli – Extrusoras</h1>
-    </div>
-    <p style="font-size: 1.05rem; color: #94a3b8;">
-        Comparativo financeiro entre <b>Mono Camada</b>, <b>Coex 3 Camadas</b> e <b>Coex 5 Camadas</b>.
-        Fórmulas fiéis à planilha original. Todos os parâmetros são editáveis.
-    </p>
-    """, unsafe_allow_html=True)
+<div style="margin-bottom: 15px;">
+    <h1 style="margin-bottom: 0;">⚙️ Carnevalli – Extrusoras</h1>
+</div>
+<p style="font-size: 1.05rem; color: #94a3b8;">
+    Comparativo financeiro entre <b>Mono Camada</b>, <b>Coex 3 Camadas</b> e <b>Coex 5 Camadas</b>.
+    Fórmulas fiéis à planilha original. Todos os parâmetros são editáveis.
+</p>
+""", unsafe_allow_html=True)
 
-    # =========================================================
-    # SELEÇÃO DE MÁQUINAS
-    # =========================================================
     st.markdown("### 👁️ Selecione as máquinas para comparar")
     col_cb1, col_cb2, col_cb3 = st.columns(3)
     with col_cb1:
@@ -639,7 +636,7 @@ def show_carnevalli():
         )
 
     # =========================================================
-    # PREÇOS DAS MATÉRIAS-PRIMAS (comuns a todas as máquinas)
+    # PREÇOS DAS MATÉRIAS-PRIMAS
     # =========================================================
     st.markdown("### 🧪 Preços das Matérias-Primas (USD/kg)")
     mp_nomes = ["LDPE","LLDPE","HDPE","ADITIVO 1","ADITIVO 2","RECICLADO","OFF GRADE","CARBONATO","OTHER"]
@@ -659,22 +656,11 @@ def show_carnevalli():
             )
 
     # =========================================================
-    # ESTRUTURA DE CAMADAS (fiel à planilha)
+    # ESTRUTURA DE CAMADAS
     # =========================================================
-    # Planilha:
-    # MONO: 1 camada (A=1.0)
-    # 3C:   A=0.2, B=0.6, A=0.2  →  A e C são iguais (skin), B é core
-    # 5C:   A=0.1, B=0.2, C=0.4, B=0.2, A=0.1
-    #        A_ext, B_ext, C_core, B_int, A_int
-    #        pelas duas pontas (A) são iguais, as B são iguais
-    #
-    # Fórmula da planilha:
-    #   custo_camada = sum(distrib_mp * preco_mp)
-    #   custo_mp_kg  = sum(dist_camada * custo_camada)
-
     estrutura_defaults = {
         "mono": [
-            {"label": "Camada A (única)",  "dist": 1.0,
+            {"label": "Camada A (única)", "dist": 1.0,
              "comp": {"LDPE":0.36,"LLDPE":0.40,"HDPE":0.03,"ADITIVO 1":0.03,"ADITIVO 2":0.03,
                       "RECICLADO":0.00,"OFF GRADE":0.00,"CARBONATO":0.00,"OTHER":0.15}},
         ],
@@ -682,7 +668,7 @@ def show_carnevalli():
             {"label": "Camada A (skin ext)", "dist": 0.2,
              "comp": {"LDPE":0.40,"LLDPE":0.44,"HDPE":0.03,"ADITIVO 1":0.03,"ADITIVO 2":0.03,
                       "RECICLADO":0.00,"OFF GRADE":0.00,"CARBONATO":0.00,"OTHER":0.07}},
-            {"label": "Camada B (core)",     "dist": 0.6,
+            {"label": "Camada B (core)", "dist": 0.6,
              "comp": {"LDPE":0.00,"LLDPE":0.00,"HDPE":0.00,"ADITIVO 1":0.00,"ADITIVO 2":0.00,
                       "RECICLADO":0.40,"OFF GRADE":0.60,"CARBONATO":0.00,"OTHER":0.00}},
             {"label": "Camada A (skin int)", "dist": 0.2,
@@ -690,19 +676,19 @@ def show_carnevalli():
                       "RECICLADO":0.00,"OFF GRADE":0.00,"CARBONATO":0.00,"OTHER":0.07}},
         ],
         "c5": [
-            {"label": "Camada A ext (0.1)",  "dist": 0.1,
+            {"label": "Camada A ext (0.1)", "dist": 0.1,
              "comp": {"LDPE":0.30,"LLDPE":0.54,"HDPE":0.03,"ADITIVO 1":0.03,"ADITIVO 2":0.03,
                       "RECICLADO":0.00,"OFF GRADE":0.00,"CARBONATO":0.00,"OTHER":0.07}},
-            {"label": "Camada B ext (0.2)",  "dist": 0.2,
+            {"label": "Camada B ext (0.2)", "dist": 0.2,
              "comp": {"LDPE":0.00,"LLDPE":0.00,"HDPE":0.00,"ADITIVO 1":0.00,"ADITIVO 2":0.00,
                       "RECICLADO":0.25,"OFF GRADE":0.75,"CARBONATO":0.00,"OTHER":0.00}},
             {"label": "Camada C core (0.4)", "dist": 0.4,
              "comp": {"LDPE":0.00,"LLDPE":0.00,"HDPE":0.00,"ADITIVO 1":0.00,"ADITIVO 2":0.00,
                       "RECICLADO":0.25,"OFF GRADE":0.75,"CARBONATO":0.00,"OTHER":0.00}},
-            {"label": "Camada B int (0.2)",  "dist": 0.2,
+            {"label": "Camada B int (0.2)", "dist": 0.2,
              "comp": {"LDPE":0.00,"LLDPE":0.00,"HDPE":0.00,"ADITIVO 1":0.00,"ADITIVO 2":0.00,
                       "RECICLADO":0.25,"OFF GRADE":0.75,"CARBONATO":0.00,"OTHER":0.00}},
-            {"label": "Camada A int (0.1)",  "dist": 0.1,
+            {"label": "Camada A int (0.1)", "dist": 0.1,
              "comp": {"LDPE":0.30,"LLDPE":0.54,"HDPE":0.03,"ADITIVO 1":0.03,"ADITIVO 2":0.03,
                       "RECICLADO":0.00,"OFF GRADE":0.00,"CARBONATO":0.00,"OTHER":0.07}},
         ],
@@ -745,27 +731,25 @@ def show_carnevalli():
         base_op = op_defaults[key]
         with tab:
             st.markdown(f"#### 🏭 {nomes_maq[key]}")
-
-            # --- Operacional ---
             st.markdown("**Produção e Operação**")
             oc1, oc2, oc3, oc4 = st.columns(4)
             with oc1:
-                prod_kg_h  = st.number_input("Produção (kg/h)",         value=base_op["prod_kg_h"],  step=10.0,    key=f"prod_{key}")
-                horas_dia  = st.number_input("Horas produtivas/dia",     value=base_op["horas_dia"],  step=1.0,     key=f"hd_{key}")
-                dias_mes   = st.number_input("Dias operativos/mês",      value=base_op["dias_mes"],   step=1.0,     key=f"dm_{key}")
+                prod_kg_h  = st.number_input("Produção (kg/h)",            value=base_op["prod_kg_h"],  step=10.0,    key=f"prod_{key}")
+                horas_dia  = st.number_input("Horas produtivas/dia",        value=base_op["horas_dia"],  step=1.0,     key=f"hd_{key}")
+                dias_mes   = st.number_input("Dias operativos/mês",         value=base_op["dias_mes"],   step=1.0,     key=f"dm_{key}")
             with oc2:
-                valor_exw  = st.number_input("Valor EXW (USD)",          value=base_op["valor_exw"],  step=50000.0, key=f"exw_{key}")
-                valor_cif  = st.number_input("Valor CIF (USD)",          value=base_op["valor_cif"],  step=50000.0, key=f"cif_{key}")
-                dep_meses  = st.number_input("Depreciação (meses)",      value=base_op["dep_meses"],  step=12.0,    key=f"dep_{key}")
+                valor_exw  = st.number_input("Valor EXW (USD)",             value=base_op["valor_exw"],  step=50000.0, key=f"exw_{key}")
+                valor_cif  = st.number_input("Valor CIF (USD)",             value=base_op["valor_cif"],  step=50000.0, key=f"cif_{key}")
+                dep_meses  = st.number_input("Depreciação (meses)",         value=base_op["dep_meses"],  step=12.0,    key=f"dep_{key}")
             with oc3:
-                n_operarios = st.number_input("Nº operários/máquina",   value=base_op["n_operarios"],step=1.0,     key=f"nop_{key}")
-                custo_op    = st.number_input("Custo 1 operário/mês (USD)", value=base_op["custo_op_mes"], step=100.0, key=f"cop_{key}")
-                n_turnos    = st.number_input("Nº de turnos",            value=base_op["n_turnos"],   step=1.0,     key=f"ntu_{key}")
+                n_operarios = st.number_input("Nº operários/máquina",      value=base_op["n_operarios"], step=1.0,    key=f"nop_{key}")
+                custo_op    = st.number_input("Custo 1 operário/mês (USD)", value=base_op["custo_op_mes"],step=100.0,  key=f"cop_{key}")
+                n_turnos    = st.number_input("Nº de turnos",               value=base_op["n_turnos"],   step=1.0,     key=f"ntu_{key}")
             with oc4:
-                potencia_kw = st.number_input("Potência instalada (kW)", value=base_op["potencia_kw"],step=50.0,    key=f"kw_{key}")
-                consumo_pct = st.number_input("Consumo elétrico real (%)", value=base_op["consumo_pct"], step=1.0,  key=f"cee_{key}")
-                custo_kwh   = st.number_input("Custo energia (USD/kWh)", value=base_op["custo_kwh"],  step=0.01,    format="%.3f", key=f"kwh_{key}")
-                outros_mes  = st.number_input("Outros indiretos/mês (USD)", value=base_op["outros_mes"], step=500.0, key=f"ind_{key}")
+                potencia_kw = st.number_input("Potência instalada (kW)",    value=base_op["potencia_kw"],step=50.0,    key=f"kw_{key}")
+                consumo_pct = st.number_input("Consumo elétrico real (%)",  value=base_op["consumo_pct"],step=1.0,     key=f"cee_{key}")
+                custo_kwh   = st.number_input("Custo energia (USD/kWh)",    value=base_op["custo_kwh"],  step=0.01,    format="%.3f", key=f"kwh_{key}")
+                outros_mes  = st.number_input("Outros indiretos/mês (USD)", value=base_op["outros_mes"], step=500.0,   key=f"ind_{key}")
 
             params_op[key] = {
                 "prod_kg_h": prod_kg_h, "horas_dia": horas_dia, "dias_mes": dias_mes,
@@ -775,15 +759,14 @@ def show_carnevalli():
                 "outros_mes": outros_mes,
             }
 
-            # --- Distribuição de MP por camada ---
             st.markdown("**Distribuição de Matérias-Primas por Camada**")
             st.caption("Frações decimais (ex: 0.36 = 36%). A soma de cada camada deve ser 1.00.")
 
             estrut_edit[key] = []
             for i, cam in enumerate(estrutura_defaults[key]):
-                with st.expander(f"{cam['label']}  —  participação no total: {cam['dist']*100:.0f}%"):
+                with st.expander(f"{cam['label']}  —  participação: {cam['dist']*100:.0f}%"):
                     dist_val = st.number_input(
-                        "Participação desta camada no total (0.0 a 1.0)",
+                        "Participação desta camada (0.0 a 1.0)",
                         value=cam["dist"], step=0.05, format="%.2f",
                         key=f"dist_{key}_{i}_total"
                     )
@@ -792,21 +775,16 @@ def show_carnevalli():
                     for mc, mp in zip(mp_cols, mp_nomes):
                         with mc:
                             comp_edit[mp] = st.number_input(
-                                mp,
-                                value=cam["comp"][mp],
+                                mp, value=cam["comp"][mp],
                                 step=0.01, format="%.2f",
                                 key=f"dist_{key}_{i}_{mp}"
                             )
                     estrut_edit[key].append({"dist": dist_val, "comp": comp_edit})
 
     # =========================================================
-    # CÁLCULOS — FIÉIS À PLANILHA
+    # CÁLCULOS FIÉIS À PLANILHA
     # =========================================================
     def calc_custo_mp(key):
-        """
-        Planilha: para cada camada, custo_camada = sum(distrib_mp * preco_mp)
-        custo_mp_kg = sum(dist_camada * custo_camada)
-        """
         total = 0.0
         for cam in estrut_edit[key]:
             custo_cam = sum(cam["comp"][mp] * precos_mp[mp] for mp in mp_nomes)
@@ -816,48 +794,36 @@ def show_carnevalli():
     def calc_maquina(key):
         p = params_op[key]
 
-        # 1) Matéria-prima/kg
         custo_mp_kg = calc_custo_mp(key)
 
-        # 2) Produção
         prod_kg_dia = p["prod_kg_h"] * p["horas_dia"]
         prod_kg_mes = prod_kg_dia * p["dias_mes"]
         prod_kg_ano = prod_kg_mes * 12.0
 
-        # 3) Depreciação (planilha: CIF / meses)
         dep_mes = p["valor_cif"] / p["dep_meses"] if p["dep_meses"] > 0 else 0.0
 
-        # 4) Mão de obra (planilha: n_op * custo_op * n_turnos)
         custo_mo_mes = p["n_operarios"] * p["custo_op_mes"] * p["n_turnos"]
 
-        # 5) Energia
-        # Planilha: consumo_efetivo_kw = potencia * (pct/100)
-        # custo_ee/kg = consumo_efetivo_kw * custo_kwh / prod_kg_h
-        # custo_ee/mês = custo_ee/kg * prod_kg_mes
-        consumo_efetivo_kw = p["potencia_kw"] * (p["consumo_pct"] / 100.0)
-        custo_ee_kg  = (consumo_efetivo_kw * p["custo_kwh"]) / p["prod_kg_h"] if p["prod_kg_h"] > 0 else 0.0
-        custo_ee_mes = custo_ee_kg * prod_kg_mes
+        consumo_ef_kw = p["potencia_kw"] * (p["consumo_pct"] / 100.0)
+        custo_ee_kg   = (consumo_ef_kw * p["custo_kwh"]) / p["prod_kg_h"] if p["prod_kg_h"] > 0 else 0.0
+        custo_ee_mes  = custo_ee_kg * prod_kg_mes
 
-        # 6) Outros indiretos
         outros = p["outros_mes"]
 
-        # 7) Outros custos/kg (planilha: dep+MO+EE+outros / prod_kg_mes)
         custo_outros_mes = dep_mes + custo_mo_mes + custo_ee_mes + outros
         custo_outros_kg  = custo_outros_mes / prod_kg_mes if prod_kg_mes > 0 else 0.0
 
-        # 8) Custo total
         custo_total_kg  = custo_mp_kg + custo_outros_kg
         custo_total_ton = custo_total_kg * 1000.0
 
-        # 9) Payback (planilha)
         ganho_kg  = preco_venda_kg - custo_total_kg
         ganho_ano = ganho_kg * prod_kg_ano
 
-        ingressos_ano    = preco_venda_kg * prod_kg_ano
-        custo_total_ano  = custo_total_kg  * prod_kg_ano
+        ingressos_ano   = preco_venda_kg * prod_kg_ano
+        custo_total_ano = custo_total_kg  * prod_kg_ano
 
         payback_anos = p["valor_cif"] / ganho_ano if ganho_ano > 0 else float("inf")
-        frac = pct_lucro_payback / 100.0
+        frac         = pct_lucro_payback / 100.0
         payback_pct  = p["valor_cif"] / (ganho_ano * frac) if (ganho_ano * frac) > 0 else float("inf")
 
         return {
@@ -867,7 +833,7 @@ def show_carnevalli():
             "prod_kg_ano":      prod_kg_ano,
             "dep_mes":          dep_mes,
             "custo_mo_mes":     custo_mo_mes,
-            "consumo_ef_kw":    consumo_efetivo_kw,
+            "consumo_ef_kw":    consumo_ef_kw,
             "custo_ee_kg":      custo_ee_kg,
             "custo_ee_mes":     custo_ee_mes,
             "outros_mes":       outros,
@@ -893,42 +859,42 @@ def show_carnevalli():
 
     card_cols = st.columns(len(keys_vis))
     for col, key in zip(card_cols, keys_vis):
-        r   = resultados[key]
-        cor = cores_maq[key]
+        r         = resultados[key]
+        cor       = cores_maq[key]
         cor_ganho = "#22c55e" if r["ganho_kg"] > 0 else "#ef4444"
         with col:
             st.markdown(f"""
-            <div style='background:linear-gradient(135deg,#1e293b,#0f172a);
-                        padding:22px; border-radius:12px;
-                        border-left:5px solid {cor}; margin-bottom:12px;
-                        box-shadow:0 4px 15px rgba(0,0,0,0.3);'>
-                <h3 style='color:{cor}; margin:0 0 18px 0;'>{nomes_maq[key]}</h3>
+<div style='background:linear-gradient(135deg,#1e293b,#0f172a);
+            padding:22px; border-radius:12px;
+            border-left:5px solid {cor}; margin-bottom:12px;
+            box-shadow:0 4px 15px rgba(0,0,0,0.3);'>
+    <h3 style='color:{cor}; margin:0 0 18px 0;'>{nomes_maq[key]}</h3>
 
-                <p style='color:#94a3b8; margin:4px 0 0; font-size:13px;'>Custo MP/kg</p>
-                <h4 style='color:white; margin:0;'>USD {r['custo_mp_kg']:.5f}</h4>
+    <p style='color:#94a3b8; margin:4px 0 0; font-size:13px;'>Custo MP/kg</p>
+    <h4 style='color:white; margin:0;'>USD {r['custo_mp_kg']:.5f}</h4>
 
-                <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Outros custos/kg</p>
-                <h4 style='color:white; margin:0;'>USD {r['custo_outros_kg']:.5f}</h4>
+    <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Outros custos/kg</p>
+    <h4 style='color:white; margin:0;'>USD {r['custo_outros_kg']:.5f}</h4>
 
-                <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Custo Total/kg</p>
-                <h4 style='color:{cor}; margin:0; font-size:1.3rem;'>USD {r['custo_total_kg']:.5f}</h4>
+    <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Custo Total/kg</p>
+    <h4 style='color:{cor}; margin:0; font-size:1.3rem;'>USD {r['custo_total_kg']:.5f}</h4>
 
-                <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Produção mensal</p>
-                <h4 style='color:white; margin:0;'>{r['prod_kg_mes']:,.0f} kg/mês</h4>
+    <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Produção mensal</p>
+    <h4 style='color:white; margin:0;'>{r['prod_kg_mes']:,.0f} kg/mês</h4>
 
-                <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Ganho/kg</p>
-                <h4 style='color:{cor_ganho}; margin:0;'>USD {r['ganho_kg']:.5f}</h4>
+    <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Ganho/kg</p>
+    <h4 style='color:{cor_ganho}; margin:0;'>USD {r['ganho_kg']:.5f}</h4>
 
-                <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Ganho/ano</p>
-                <h4 style='color:{cor_ganho}; margin:0;'>USD {r['ganho_ano']:,.0f}</h4>
+    <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Ganho/ano</p>
+    <h4 style='color:{cor_ganho}; margin:0;'>USD {r['ganho_ano']:,.0f}</h4>
 
-                <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Payback (100% lucro)</p>
-                <h4 style='color:white; margin:0;'>{r['payback_anos']:.3f} anos</h4>
+    <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Payback (100% lucro)</p>
+    <h4 style='color:white; margin:0;'>{r['payback_anos']:.3f} anos</h4>
 
-                <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Payback ({pct_lucro_payback:.0f}% lucro)</p>
-                <h4 style='color:{cor}; margin:0;'>{r['payback_pct']:.3f} anos</h4>
-            </div>
-            """, unsafe_allow_html=True)
+    <p style='color:#94a3b8; margin:8px 0 0; font-size:13px;'>Payback ({pct_lucro_payback:.0f}% lucro)</p>
+    <h4 style='color:{cor}; margin:0;'>{r['payback_pct']:.3f} anos</h4>
+</div>
+""", unsafe_allow_html=True)
 
     # =========================================================
     # GRÁFICOS
@@ -939,10 +905,9 @@ def show_carnevalli():
     nomes_vis = [nomes_maq[k] for k in keys_vis]
     cores_vis = [cores_maq[k] for k in keys_vis]
 
-    # --- 1) Composição do custo/kg (empilhado) ---
+    # 1) Composição custo/kg empilhado
     st.markdown("#### 1) Composição do Custo Total por kg (USD)")
     st.caption("Quanto é matéria-prima e quanto são outros custos operacionais")
-
     fig1 = go.Figure()
     fig1.add_trace(go.Bar(
         name="Matéria-Prima",
@@ -970,10 +935,9 @@ def show_carnevalli():
     )
     st.plotly_chart(fig1, use_container_width=True)
 
-    # --- 2) Ganho anual ---
+    # 2) Ganho anual
     st.markdown("#### 2) Ganho Anual por Máquina (USD/ano)")
-    st.caption("Quanto cada máquina gera de lucro por ano com o preço de venda informado")
-
+    st.caption("Quanto cada máquina gera de lucro por ano")
     fig2 = go.Figure()
     for k in keys_vis:
         fig2.add_trace(go.Bar(
@@ -992,10 +956,9 @@ def show_carnevalli():
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-    # --- 3) Payback ---
+    # 3) Payback
     st.markdown("#### 3) Payback – Recuperação do Investimento (anos)")
     st.caption("Quanto menor, melhor. Linha branca = 100% do lucro. Barras = percentual configurado.")
-
     fig3 = go.Figure()
     fig3.add_trace(go.Bar(
         name=f"Payback ({pct_lucro_payback:.0f}% lucro)",
@@ -1024,9 +987,8 @@ def show_carnevalli():
     )
     st.plotly_chart(fig3, use_container_width=True)
 
-    # --- 4) Produção anual ---
+    # 4) Produção anual
     st.markdown("#### 4) Capacidade de Produção Anual (kg/ano)")
-
     fig4 = go.Figure()
     for k in keys_vis:
         fig4.add_trace(go.Bar(
@@ -1045,10 +1007,9 @@ def show_carnevalli():
     )
     st.plotly_chart(fig4, use_container_width=True)
 
-    # --- 5) Custo x Ganho (scatter) ---
-    st.markdown("#### 5) Custo x Ganho por kg")
-    st.caption("Posição ideal: menor custo e maior ganho (canto inferior direito)")
-
+    # 5) Scatter custo x ganho
+    st.markdown("#### 5) Custo vs Ganho por kg")
+    st.caption("Ideal: menor custo e maior ganho")
     fig5 = go.Figure()
     for k in keys_vis:
         fig5.add_trace(go.Scatter(
@@ -1069,19 +1030,16 @@ def show_carnevalli():
     )
     st.plotly_chart(fig5, use_container_width=True)
 
-        # --- 6) Fluxo de caixa acumulado ---
+    # 6) Fluxo de caixa acumulado
     st.markdown("#### 6) Fluxo de Caixa Acumulado – 0 a 5 anos")
     st.caption("Inclui investimento inicial (CIF) no Ano 0. Mostra quando cada máquina se paga.")
-
     anos = list(range(0, 6))
     fig6 = go.Figure()
-
     fills = {
         "mono": "rgba(59,130,246,0.08)",
         "c3":   "rgba(34,197,94,0.08)",
         "c5":   "rgba(245,158,11,0.08)",
     }
-
     for k in keys_vis:
         r   = resultados[k]
         cor = cores_maq[k]
@@ -1100,7 +1058,6 @@ def show_carnevalli():
             fillcolor=fills[k],
             hovertemplate=f"<b>{nomes_maq[k]}</b><br>Ano %{{x}}<br>USD %{{y:,.0f}}<extra></extra>",
         ))
-
     fig6.add_hline(
         y=0, line_dash="dash", line_color="white", opacity=0.4,
         annotation_text="Ponto de equilíbrio",
@@ -1117,7 +1074,7 @@ def show_carnevalli():
     st.plotly_chart(fig6, use_container_width=True)
 
     # =========================================================
-    # TABELA DETALHADA (conferência com a planilha)
+    # TABELA DETALHADA
     # =========================================================
     st.markdown("---")
     with st.expander("📋 Tabela Detalhada (conferência com a planilha Excel)"):
@@ -1126,27 +1083,26 @@ def show_carnevalli():
             r = resultados[key]
             p = params_op[key]
             linhas.append({
-                "Máquina":                              nomes_maq[key],
-                "Custo MP/kg (USD)":                   r["custo_mp_kg"],
-                "Outros custos/kg (USD)":              r["custo_outros_kg"],
-                "Custo Total/kg (USD)":                r["custo_total_kg"],
-                "Custo Total/ton (USD)":               r["custo_total_ton"],
-                "Produção kg/dia":                     r["prod_kg_dia"],
-                "Produção kg/mês":                     r["prod_kg_mes"],
-                "Produção kg/ano":                     r["prod_kg_ano"],
-                "Depreciação/mês (USD)":               r["dep_mes"],
-                "MO/mês (USD)":                        r["custo_mo_mes"],
-                "Energia/kg (USD)":                    r["custo_ee_kg"],
-                "Energia/mês (USD)":                   r["custo_ee_mes"],
-                "Outros indiretos/mês (USD)":          r["outros_mes"],
-                "Ganho/kg (USD)":                      r["ganho_kg"],
-                "Ganho/ano (USD)":                     r["ganho_ano"],
-                "Ingressos/ano (USD)":                 r["ingressos_ano"],
-                "Custo total/ano (USD)":               r["custo_total_ano"],
-                "Payback 100% lucro (anos)":           r["payback_anos"],
+                "Máquina":                     nomes_maq[key],
+                "Custo MP/kg (USD)":           r["custo_mp_kg"],
+                "Outros custos/kg (USD)":      r["custo_outros_kg"],
+                "Custo Total/kg (USD)":        r["custo_total_kg"],
+                "Custo Total/ton (USD)":       r["custo_total_ton"],
+                "Produção kg/dia":             r["prod_kg_dia"],
+                "Produção kg/mês":             r["prod_kg_mes"],
+                "Produção kg/ano":             r["prod_kg_ano"],
+                "Depreciação/mês (USD)":       r["dep_mes"],
+                "MO/mês (USD)":                r["custo_mo_mes"],
+                "Energia/kg (USD)":            r["custo_ee_kg"],
+                "Energia/mês (USD)":           r["custo_ee_mes"],
+                "Outros indiretos/mês (USD)":  r["outros_mes"],
+                "Ganho/kg (USD)":              r["ganho_kg"],
+                "Ganho/ano (USD)":             r["ganho_ano"],
+                "Ingressos/ano (USD)":         r["ingressos_ano"],
+                "Custo total/ano (USD)":       r["custo_total_ano"],
+                "Payback 100% lucro (anos)":   r["payback_anos"],
                 f"Payback {pct_lucro_payback:.0f}% lucro (anos)": r["payback_pct"],
             })
-
         df_tab = pd.DataFrame(linhas)
         st.dataframe(
             df_tab.style.format({
