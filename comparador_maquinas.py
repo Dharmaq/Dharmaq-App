@@ -851,29 +851,56 @@ def show_carnevalli():
 
     resultados = {k: calc_maquina(k) for k in ["mono","c3","c5"]}
 
+      # =========================================================
+    # CARDS DE RESUMO – estilo card, mas usando só markdown
     # =========================================================
-    # CARDS DE RESUMO
-    # =========================================================
-
     st.markdown("---")
     st.markdown("### 📊 Resumo Comparativo")
 
     card_cols = st.columns(len(keys_vis))
     for col, key in zip(card_cols, keys_vis):
-        r         = resultados[key]
-        cor       = cores_maq[key]
-        with col:
-            st.markdown(f"#### {nomes_maq[key]}")
-            st.metric(label="Custo MP/kg",         value=f"USD {r['custo_mp_kg']:.5f}")
-            st.metric(label="Outros custos/kg",    value=f"USD {r['custo_outros_kg']:.5f}")
-            st.metric(label="Custo Total/kg",      value=f"USD {r['custo_total_kg']:.5f}")
-            st.metric(label="Produção mensal",     value=f"{r['prod_kg_mes']:,.0f} kg/mês")
-            st.metric(label="Ganho/kg",            value=f"USD {r['ganho_kg']:.5f}")
-            st.metric(label="Ganho/ano",           value=f"USD {r['ganho_ano']:,.0f}")
-            st.metric(label="Payback 100% lucro",  value=f"{r['payback_anos']:.3f} anos")
-            st.metric(label=f"Payback {pct_lucro_payback:.0f}% lucro", value=f"{r['payback_pct']:.3f} anos")
-            st.markdown("---")
+        r   = resultados[key]
+        cor = cores_maq[key]
+        cor_ganho = "#22c55e" if r["ganho_kg"] > 0 else "#ef4444"
 
+        with col:
+            st.markdown(f"""
+<div style="
+    background: linear-gradient(135deg, #1e293b 0%, #020617 100%);
+    border-radius: 12px;
+    padding: 16px 18px;
+    border-left: 5px solid {cor};
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+    font-size: 13px;">
+  <div style="font-weight: 700; font-size: 16px; color: {cor}; margin-bottom: 8px;">
+    {nomes_maq[key]}
+  </div>
+
+  <div style="color:#94a3b8;">Custo MP/kg</div>
+  <div style="color:#e5e7eb; font-weight:600; margin-bottom:4px;">USD {r['custo_mp_kg']:.5f}</div>
+
+  <div style="color:#94a3b8;">Outros custos/kg</div>
+  <div style="color:#e5e7eb; font-weight:600; margin-bottom:4px;">USD {r['custo_outros_kg']:.5f}</div>
+
+  <div style="color:#94a3b8;">Custo Total/kg</div>
+  <div style="color:{cor}; font-weight:700; font-size:18px; margin-bottom:6px;">USD {r['custo_total_kg']:.5f}</div>
+
+  <div style="color:#94a3b8;">Produção mensal</div>
+  <div style="color:#e5e7eb; font-weight:600; margin-bottom:4px;">{r['prod_kg_mes']:,.0f} kg/mês</div>
+
+  <div style="color:#94a3b8;">Ganho/kg</div>
+  <div style="color:{cor_ganho}; font-weight:600; margin-bottom:4px;">USD {r['ganho_kg']:.5f}</div>
+
+  <div style="color:#94a3b8;">Ganho/ano</div>
+  <div style="color:{cor_ganho}; font-weight:600; margin-bottom:4px;">USD {r['ganho_ano']:,.0f}</div>
+
+  <div style="color:#94a3b8;">Payback (100% lucro)</div>
+  <div style="color:#e5e7eb; font-weight:600; margin-bottom:4px;">{r['payback_anos']:.3f} anos</div>
+
+  <div style="color:#94a3b8;">Payback ({pct_lucro_payback:.0f}% lucro)</div>
+  <div style="color:{cor}; font-weight:600;">{r['payback_pct']:.3f} anos</div>
+</div>
+""", unsafe_allow_html=True)
     # =========================================================
     # GRÁFICOS
     # =========================================================
