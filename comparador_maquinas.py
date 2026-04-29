@@ -82,7 +82,7 @@ Escolha abaixo qual módulo deseja abrir.
 
         c3, c4 = st.columns(2)
         with c3:
-            if st.button("🔸 Carnevalli (em breve)", use_container_width=True):
+            if st.button("🔸 Carnevalli ", use_container_width=True):
                 go_to("carnevalli")
         with c4:
             st.info("Outros módulos podem ser adicionados aqui futuramente.")
@@ -1069,12 +1069,19 @@ def show_carnevalli():
     )
     st.plotly_chart(fig5, use_container_width=True)
 
-    # --- 6) Fluxo de caixa acumulado ---
+        # --- 6) Fluxo de caixa acumulado ---
     st.markdown("#### 6) Fluxo de Caixa Acumulado – 0 a 5 anos")
     st.caption("Inclui investimento inicial (CIF) no Ano 0. Mostra quando cada máquina se paga.")
 
     anos = list(range(0, 6))
     fig6 = go.Figure()
+
+    fills = {
+        "mono": "rgba(59,130,246,0.08)",
+        "c3":   "rgba(34,197,94,0.08)",
+        "c5":   "rgba(245,158,11,0.08)",
+    }
+
     for k in keys_vis:
         r   = resultados[k]
         cor = cores_maq[k]
@@ -1083,21 +1090,26 @@ def show_carnevalli():
         for _ in range(1, 6):
             fluxo.append(fluxo[-1] + r["ganho_ano"])
         fig6.add_trace(go.Scatter(
-            x=anos, y=fluxo,
+            x=anos,
+            y=fluxo,
             mode="lines+markers",
             name=nomes_maq[k],
             line=dict(color=cor, width=3),
             marker=dict(size=8),
             fill="tozeroy",
-            fillcolor=cor.replace(")", ",0.07)").replace("rgb","rgba") if "rgb" in cor else cor + "15",
+            fillcolor=fills[k],
             hovertemplate=f"<b>{nomes_maq[k]}</b><br>Ano %{{x}}<br>USD %{{y:,.0f}}<extra></extra>",
         ))
-    fig6.add_hline(y=0, line_dash="dash", line_color="white", opacity=0.4,
-                   annotation_text="Ponto de equilíbrio", annotation_position="bottom right")
+
+    fig6.add_hline(
+        y=0, line_dash="dash", line_color="white", opacity=0.4,
+        annotation_text="Ponto de equilíbrio",
+        annotation_position="bottom right"
+    )
     fig6.update_layout(
         paper_bgcolor="#0e1117", plot_bgcolor="#1e2130",
         font_color="white", height=450,
-        xaxis=dict(title="Anos", gridcolor="#334155", tickvals=list(range(0,6))),
+        xaxis=dict(title="Anos", gridcolor="#334155", tickvals=list(range(0, 6))),
         yaxis=dict(title="Fluxo Acumulado (USD)", gridcolor="#334155"),
         legend=dict(bgcolor="#1e2130", bordercolor="#334155"),
         hovermode="x unified",
