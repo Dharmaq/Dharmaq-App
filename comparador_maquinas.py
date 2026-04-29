@@ -578,14 +578,618 @@ def show_inpack():
         st.dataframe(df_tab, use_container_width=True)
 
 # =====================================================================
-# MÓDULO 2 - CARNEVALLI (EM BREVE)
+# MÓDULO 2 - CARNEVALLI COMPARADOR MÁQUINAS
 # =====================================================================
-def show_carnevalli():
+def sdef show_carnevalli():
     show_top_menu()
-    st.title("Carnevalli - Extrusoras")
-    st.info("Módulo em desenvolvimento. Em breve, iremos conectar este painel a uma planilha de extrusoras (Carnevalli) para simular produção, consumo e retorno de investimento.")
 
-# =====================================================================
+    st.markdown("""
+    <div style="margin-bottom: 15px;">
+        <h1 style="margin-bottom: 0;">⚙️ Carnevalli – Extrusoras</h1>
+    </div>
+    <p style="font-size: 1.05rem; color: #94a3b8;">
+        Comparativo financeiro entre extrusoras <b>Mono camada</b>, <b>Coex 3 camadas</b> e <b>Coex 5 camadas</b>.
+        Todos os parâmetros são editáveis. Fórmulas fiéis à planilha original.
+    </p>
+    """, unsafe_allow_html=True)
+
+    # =====================================================================
+    # SELEÇÃO DE MÁQUINAS PARA COMPARAR
+    # =====================================================================
+    st.markdown("### 👁️ Selecione as máquinas para comparar")
+    col_cb1, col_cb2, col_cb3 = st.columns(3)
+    with col_cb1:
+        mostrar_mono = st.checkbox("Mono camada", value=True)
+    with col_cb2:
+        mostrar_c3 = st.checkbox("Coex 3 camadas", value=True)
+    with col_cb3:
+        mostrar_c5 = st.checkbox("Coex 5 camadas", value=True)
+
+    keys_vis = []
+    if mostrar_mono: keys_vis.append("mono")
+    if mostrar_c3:   keys_vis.append("c3")
+    if mostrar_c5:   keys_vis.append("c5")
+
+    if not keys_vis:
+        st.warning("Selecione ao menos uma máquina para exibir.")
+        return
+
+    cores_maq = {
+        "mono": "#3b82f6",
+        "c3":   "#22c55e",
+        "c5":   "#f59e0b",
+    }
+    nomes_maq = {
+        "mono": "Mono Camada",
+        "c3":   "Coex 3 Camadas",
+        "c5":   "Coex 5 Camadas",
+    }
+
+    # =====================================================================
+    # PARÂMETROS GERAIS
+    # =====================================================================
+    st.markdown("### 🌐 Parâmetros Gerais de Mercado")
+    cg1, cg2, cg3 = st.columns(3)
+    with cg1:
+        preco_venda_kg = st.number_input(
+            "Preço de venda da bobina (USD/kg)",
+            value=2.0, step=0.05, format="%.4f", key="pv_kg"
+        )
+    with cg2:
+        pct_lucro_payback = st.number_input(
+            "% do lucro usado para pagar a máquina",
+            value=30.0, step=5.0, format="%.1f", key="pct_pb"
+        )
+    with cg3:
+        espessura_total = st.number_input(
+            "Espessura total do filme (µ)",
+            value=100.0, step=5.0, format="%.1f", key="esp_total"
+        )
+
+    # =====================================================================
+    # MATÉRIAS-PRIMAS (comuns a todas as máquinas)
+    # =====================================================================
+    st.markdown("### 🧪 Preços das Matérias-Primas (USD/kg)")
+    st.caption("Estes preços valem para todas as máquinas. A distribuição (%) por camada é editada em cada aba.")
+
+    mp_nomes = ["LDPE", "LLDPE", "HDPE", "ADITIVO 1", "ADITIVO 2", "RECICLADO", "OFF GRADE", "CARBONATO", "OTHER"]
+    mp_defaults = {
+        "LDPE":      1.00,
+        "LLDPE":     0.95,
+        "HDPE":      1.10,
+        "ADITIVO 1": 2.30,
+        "ADITIVO 2": 3.00,
+        "RECICLADO": 0.75,
+        "OFF GRADE": 0.50,
+        "CARBONATO": 0.50,
+        "OTHER":     0.90,
+    }
+
+    cols_mp = st.columns(len(mp_nomes))
+    precos_mp = {}
+    for col, nome in zip(cols_mp, mp_nomes):
+        with col:
+            precos_mp[nome] = st.number_input(
+                nome,
+                value=mp_defaults[nome],
+                step=0.05,
+                format="%.2f",
+                key=f"preco_{nome}"
+            )
+
+    # =====================================================================
+    # DISTRIBUIÇÃO DE MP POR MÁQUINA (por camada)
+    # Fórmula da planilha: custo_mp_kg = sum(distrib_i * preco_i) para cada camada
+    # e soma das camadas ponderada pela distribuição entre capas
+    # =====================================================================
+
+    # Defaults da planilha
+    # Mono: 1 camada (A=1)
+    # 3C: A=0.2, B=0.6, C=0.2 (na planilha aparece como A/B/A invertida)
+    # 5C: A=0.1, B=0.2, C=0.4, B=0.2, A=0.1
+
+    distrib_defaults = {
+        "mono": {
+            # (camada única)
+            "A": {
+                "dist_camada": 1.0,
+                "LDPE": 0.36, "LLDPE": 0.40, "HDPE": 0.03,
+                "ADITIVO 1": 0.03, "ADITIVO 2": 0.03,
+                "RECICLADO": 0.00, "OFF GRADE": 0.00,
+                "CARBONATO": 0.00, "OTHER": 0.15,
+            },
+        },
+        "c3": {
+            "A": {
+                "dist_camada": 0.2,
+                "LDPE": 0.40, "LLDPE": 0.44, "HDPE": 0.03,
+                "ADITIVO 1": 0.03, "ADITIVO 2": 0.03,
+                "RECICLADO": 0.00, "OFF GRADE": 0.00,
+                "CARBONATO": 0.00, "OTHER": 0.07,
+            },
+            "B": {
+                "dist_camada": 0.6,
+                "LDPE": 0.00, "LLDPE": 0.00, "HDPE": 0.00,
+                "ADITIVO 1": 0.00, "ADITIVO 2": 0.00,
+                "RECICLADO": 0.40, "OFF GRADE": 0.60,
+                "CARBONATO": 0.00, "OTHER": 0.00,
+            },
+            "C": {
+                "dist_camada": 0.2,
+                "LDPE": 0.40, "LLDPE": 0.44, "HDPE": 0.03,
+                "ADITIVO 1": 0.03, "ADITIVO 2": 0.03,
+                "RECICLADO": 0.00, "OFF GRADE": 0.00,
+                "CARBONATO": 0.00, "OTHER": 0.07,
+            },
+        },
+        "c5": {
+            "A_ext": {
+                "dist_camada": 0.1,
+                "LDPE": 0.30, "LLDPE": 0.54, "HDPE": 0.03,
+                "ADITIVO 1": 0.03, "ADITIVO 2": 0.03,
+                "RECICLADO": 0.00, "OFF GRADE": 0.00,
+                "CARBONATO": 0.00, "OTHER": 0.07,
+            },
+            "B_ext": {
+                "dist_camada": 0.2,
+                "LDPE": 0.00, "LLDPE": 0.00, "HDPE": 0.00,
+                "ADITIVO 1": 0.00, "ADITIVO 2": 0.00,
+                "RECICLADO": 0.25, "OFF GRADE": 0.75,
+                "CARBONATO": 0.00, "OTHER": 0.00,
+            },
+            "C_core": {
+                "dist_camada": 0.4,
+                "LDPE": 0.00, "LLDPE": 0.00, "HDPE": 0.00,
+                "ADITIVO 1": 0.00, "ADITIVO 2": 0.00,
+                "RECICLADO": 0.25, "OFF GRADE": 0.75,
+                "CARBONATO": 0.00, "OTHER": 0.00,
+            },
+            "B_int": {
+                "dist_camada": 0.2,
+                "LDPE": 0.00, "LLDPE": 0.00, "HDPE": 0.00,
+                "ADITIVO 1": 0.00, "ADITIVO 2": 0.00,
+                "RECICLADO": 0.25, "OFF GRADE": 0.75,
+                "CARBONATO": 0.00, "OTHER": 0.00,
+            },
+            "A_int": {
+                "dist_camada": 0.1,
+                "LDPE": 0.30, "LLDPE": 0.54, "HDPE": 0.03,
+                "ADITIVO 1": 0.03, "ADITIVO 2": 0.03,
+                "RECICLADO": 0.00, "OFF GRADE": 0.00,
+                "CARBONATO": 0.00, "OTHER": 0.07,
+            },
+        },
+    }
+
+    # =====================================================================
+    # PARÂMETROS OPERACIONAIS POR MÁQUINA
+    # =====================================================================
+    op_defaults = {
+        "mono": {
+            "prod_kg_h": 400.0, "horas_dia": 21.0, "dias_mes": 30.0,
+            "valor_exw": 760000.0, "valor_cif": 950000.0, "dep_meses": 120.0,
+            "n_operarios": 1, "custo_operario_mes": 1000.0, "n_turnos": 3,
+            "potencia_kw": 250.0, "consumo_pct": 45.0, "custo_kwh": 0.20,
+            "outros_indiretos_mes": 6000.0,
+        },
+        "c3": {
+            "prod_kg_h": 500.0, "horas_dia": 21.0, "dias_mes": 30.0,
+            "valor_exw": 1200000.0, "valor_cif": 1500000.0, "dep_meses": 120.0,
+            "n_operarios": 1, "custo_operario_mes": 1000.0, "n_turnos": 3,
+            "potencia_kw": 450.0, "consumo_pct": 37.0, "custo_kwh": 0.20,
+            "outros_indiretos_mes": 6000.0,
+        },
+        "c5": {
+            "prod_kg_h": 800.0, "horas_dia": 21.0, "dias_mes": 30.0,
+            "valor_exw": 2000000.0, "valor_cif": 2500000.0, "dep_meses": 120.0,
+            "n_operarios": 1, "custo_operario_mes": 1000.0, "n_turnos": 3,
+            "potencia_kw": 750.0, "consumo_pct": 35.0, "custo_kwh": 0.20,
+            "outros_indiretos_mes": 6000.0,
+        },
+    }
+
+    # =====================================================================
+    # ABAS DE EDIÇÃO POR MÁQUINA
+    # =====================================================================
+    st.markdown("### ⚙️ Parâmetros por Máquina")
+    tabs = st.tabs([nomes_maq[k] for k in ["mono", "c3", "c5"]])
+
+    params_op = {}
+    distrib_edit = {}
+
+    for tab, key in zip(tabs, ["mono", "c3", "c5"]):
+        base_op = op_defaults[key]
+        base_dist = distrib_defaults[key]
+        with tab:
+            st.markdown(f"#### 🏭 {nomes_maq[key]}")
+
+            # --- Operacional ---
+            st.markdown("**Produção e Operação**")
+            oc1, oc2, oc3, oc4 = st.columns(4)
+            with oc1:
+                prod_kg_h = st.number_input("Produção (kg/h)", value=base_op["prod_kg_h"], step=10.0, key=f"prod_{key}")
+                horas_dia = st.number_input("Horas produtivas/dia", value=base_op["horas_dia"], step=1.0, key=f"hd_{key}")
+                dias_mes  = st.number_input("Dias operativos/mês", value=base_op["dias_mes"], step=1.0, key=f"dm_{key}")
+            with oc2:
+                valor_exw  = st.number_input("Valor EXW (USD)", value=base_op["valor_exw"], step=50000.0, key=f"exw_{key}")
+                valor_cif  = st.number_input("Valor CIF (USD)", value=base_op["valor_cif"], step=50000.0, key=f"cif_{key}")
+                dep_meses  = st.number_input("Depreciação (meses)", value=base_op["dep_meses"], step=12.0, key=f"dep_{key}")
+            with oc3:
+                n_operarios       = st.number_input("Nº operários/máquina", value=float(base_op["n_operarios"]), step=1.0, key=f"nop_{key}")
+                custo_operario    = st.number_input("Custo 1 operário/mês (USD)", value=base_op["custo_operario_mes"], step=100.0, key=f"cop_{key}")
+                n_turnos          = st.number_input("Nº de turnos", value=float(base_op["n_turnos"]), step=1.0, key=f"ntu_{key}")
+            with oc4:
+                potencia_kw       = st.number_input("Potência instalada (kW)", value=base_op["potencia_kw"], step=50.0, key=f"kw_{key}")
+                consumo_pct       = st.number_input("Consumo elétrico real (%)", value=base_op["consumo_pct"], step=1.0, key=f"cee_{key}")
+                custo_kwh         = st.number_input("Custo energia (USD/kWh)", value=base_op["custo_kwh"], step=0.01, format="%.3f", key=f"kwh_{key}")
+                outros_mes        = st.number_input("Outros indiretos/mês (USD)", value=base_op["outros_indiretos_mes"], step=500.0, key=f"ind_{key}")
+
+            params_op[key] = {
+                "prod_kg_h": prod_kg_h, "horas_dia": horas_dia, "dias_mes": dias_mes,
+                "valor_exw": valor_exw, "valor_cif": valor_cif, "dep_meses": dep_meses,
+                "n_operarios": n_operarios, "custo_operario_mes": custo_operario, "n_turnos": n_turnos,
+                "potencia_kw": potencia_kw, "consumo_pct": consumo_pct, "custo_kwh": custo_kwh,
+                "outros_indiretos_mes": outros_mes,
+            }
+
+            # --- Distribuição de MP por camada ---
+            st.markdown("**Distribuição de Matérias-Primas por Camada (%)**")
+            st.caption("A soma de cada camada deve ser 1.00 (100%). A planilha usa frações decimais.")
+
+            distrib_edit[key] = {}
+            for cam_nome, cam_vals in base_dist.items():
+                with st.expander(f"Camada {cam_nome} — participação no total: {cam_vals['dist_camada']*100:.0f}%"):
+                    dist_cam = st.number_input(
+                        f"Participação desta camada no total (%)",
+                        value=cam_vals["dist_camada"],
+                        step=0.05, format="%.2f",
+                        key=f"dist_{key}_{cam_nome}_total"
+                    )
+                    mp_col = st.columns(len(mp_nomes))
+                    comp_vals = {}
+                    for mp_c, mp_nome in zip(mp_col, mp_nomes):
+                        with mp_c:
+                            comp_vals[mp_nome] = st.number_input(
+                                mp_nome,
+                                value=cam_vals[mp_nome],
+                                step=0.01, format="%.2f",
+                                key=f"dist_{key}_{cam_nome}_{mp_nome}"
+                            )
+                    distrib_edit[key][cam_nome] = {"dist_camada": dist_cam, **comp_vals}
+
+    # =====================================================================
+    # CÁLCULOS FIÉIS À PLANILHA
+    # =====================================================================
+    def calcular_custo_mp(key):
+        """
+        Fórmula da planilha:
+        Para cada camada: custo_camada = sum(distrib_mp * preco_mp)
+        Custo total MP/kg = sum(dist_camada * custo_camada)
+        """
+        custo_mp_total = 0.0
+        detalhes_camadas = {}
+        for cam_nome, cam_vals in distrib_edit[key].items():
+            dist_cam = cam_vals["dist_camada"]
+            custo_cam = sum(cam_vals[mp] * precos_mp[mp] for mp in mp_nomes)
+            custo_mp_total += dist_cam * custo_cam
+            detalhes_camadas[cam_nome] = {
+                "dist_camada": dist_cam,
+                "custo_camada": custo_cam,
+                "contribuicao": dist_cam * custo_cam,
+            }
+        return custo_mp_total, detalhes_camadas
+
+    def calcular_maquina(key):
+        p = params_op[key]
+
+        # 1) Matéria-prima
+        custo_mp_kg, det_cam = calcular_custo_mp(key)
+
+        # 2) Produção
+        prod_kg_dia = p["prod_kg_h"] * p["horas_dia"]
+        prod_kg_mes = prod_kg_dia * p["dias_mes"]
+        prod_kg_ano = prod_kg_mes * 12
+
+        # 3) Depreciação (planilha: CIF / meses)
+        dep_mes = p["valor_cif"] / p["dep_meses"] if p["dep_meses"] > 0 else 0
+
+        # 4) Mão de obra (planilha: n_op * custo_op * n_turnos)
+        custo_mo_mes = p["n_operarios"] * p["custo_operario_mes"] * p["n_turnos"]
+
+        # 5) Energia
+        # Planilha: consumo_efetivo = potencia * (pct/100)
+        # custo_ee/kg = consumo_efetivo * custo_kwh / prod_kg_h
+        # custo_ee/mês = custo_ee/kg * prod_kg_mes
+        consumo_efetivo_kw = p["potencia_kw"] * (p["consumo_pct"] / 100.0)
+        custo_ee_kg = consumo_efetivo_kw * p["custo_kwh"] / p["prod_kg_h"] if p["prod_kg_h"] > 0 else 0
+        custo_ee_mes = custo_ee_kg * prod_kg_mes
+
+        # 6) Outros indiretos
+        outros_mes = p["outros_indiretos_mes"]
+
+        # 7) Outros custos/kg (planilha: dep+MO+EE+outros / prod_kg_mes)
+        custo_outros_mes = dep_mes + custo_mo_mes + custo_ee_mes + outros_mes
+        custo_outros_kg  = custo_outros_mes / prod_kg_mes if prod_kg_mes > 0 else 0
+
+        # 8) Custo total
+        custo_total_kg  = custo_mp_kg + custo_outros_kg
+        custo_total_ton = custo_total_kg * 1000
+
+        # 9) Payback
+        ganho_kg  = preco_venda_kg - custo_total_kg
+        ganho_ano = ganho_kg * prod_kg_ano
+
+        ingressos_ano   = preco_venda_kg * prod_kg_ano
+        custo_total_ano = custo_total_kg * prod_kg_ano
+        ganho_ano_check = ingressos_ano - custo_total_ano
+
+        payback_anos = p["valor_cif"] / ganho_ano if ganho_ano > 0 else float("inf")
+        frac = pct_lucro_payback / 100.0
+        payback_anos_pct = p["valor_cif"] / (ganho_ano * frac) if ganho_ano * frac > 0 else float("inf")
+
+        return {
+            "custo_mp_kg": custo_mp_kg,
+            "det_cam": det_cam,
+            "prod_kg_dia": prod_kg_dia,
+            "prod_kg_mes": prod_kg_mes,
+            "prod_kg_ano": prod_kg_ano,
+            "dep_mes": dep_mes,
+            "custo_mo_mes": custo_mo_mes,
+            "consumo_efetivo_kw": consumo_efetivo_kw,
+            "custo_ee_kg": custo_ee_kg,
+            "custo_ee_mes": custo_ee_mes,
+            "outros_mes": outros_mes,
+            "custo_outros_mes": custo_outros_mes,
+            "custo_outros_kg": custo_outros_kg,
+            "custo_total_kg": custo_total_kg,
+            "custo_total_ton": custo_total_ton,
+            "ganho_kg": ganho_kg,
+            "ganho_ano": ganho_ano,
+            "ingressos_ano": ingressos_ano,
+            "custo_total_ano": custo_total_ano,
+            "payback_anos": payback_anos,
+            "payback_anos_pct": payback_anos_pct,
+        }
+
+    resultados = {k: calcular_maquina(k) for k in ["mono", "c3", "c5"]}
+
+    # =====================================================================
+    # CARDS DE RESUMO
+    # =====================================================================
+    st.markdown("---")
+    st.markdown("### 📊 Resumo Comparativo")
+
+    card_cols = st.columns(len(keys_vis))
+    for col, key in zip(card_cols, keys_vis):
+        r   = resultados[key]
+        cor = cores_maq[key]
+        with col:
+            st.markdown(f"""
+            <div style='background:linear-gradient(135deg,#1e293b,#0f172a);
+                        padding:20px; border-radius:12px;
+                        border-left:5px solid {cor}; margin-bottom:10px;
+                        box-shadow:0 4px 15px rgba(0,0,0,0.3);'>
+                <h3 style='color:{cor}; margin:0 0 15px 0;'>{nomes_maq[key]}</h3>
+
+                <p style='color:#94a3b8; margin:4px 0 0 0; font-size:13px;'>Custo MP/kg</p>
+                <h4 style='color:white; margin:0;'>USD {r['custo_mp_kg']:.4f}</h4>
+
+                <p style='color:#94a3b8; margin:8px 0 0 0; font-size:13px;'>Outros custos/kg</p>
+                <h4 style='color:white; margin:0;'>USD {r['custo_outros_kg']:.4f}</h4>
+
+                <p style='color:#94a3b8; margin:8px 0 0 0; font-size:13px;'>Custo total/kg</p>
+                <h4 style='color:{cor}; margin:0;'>USD {r['custo_total_kg']:.4f}</h4>
+
+                <p style='color:#94a3b8; margin:8px 0 0 0; font-size:13px;'>Produção mensal</p>
+                <h4 style='color:white; margin:0;'>{r['prod_kg_mes']:,.0f} kg/mês</h4>
+
+                <p style='color:#94a3b8; margin:8px 0 0 0; font-size:13px;'>Ganho/kg</p>
+                <h4 style='color:{"#22c55e" if r["ganho_kg"]>0 else "#ef4444"}; margin:0;'>USD {r['ganho_kg']:.4f}</h4>
+
+                <p style='color:#94a3b8; margin:8px 0 0 0; font-size:13px;'>Ganho/ano</p>
+                <h4 style='color:{"#22c55e" if r["ganho_ano"]>0 else "#ef4444"}; margin:0;'>USD {r['ganho_ano']:,.0f}</h4>
+
+                <p style='color:#94a3b8; margin:8px 0 0 0; font-size:13px;'>Payback (100% lucro)</p>
+                <h4 style='color:white; margin:0;'>{r['payback_anos']:.3f} anos</h4>
+
+                <p style='color:#94a3b8; margin:8px 0 0 0; font-size:13px;'>Payback ({pct_lucro_payback:.0f}% lucro)</p>
+                <h4 style='color:{cor}; margin:0;'>{r['payback_anos_pct']:.3f} anos</h4>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # =====================================================================
+    # GRÁFICOS
+    # =====================================================================
+    st.markdown("---")
+    st.markdown("### 📈 Gráficos Comparativos")
+
+    nomes_vis  = [nomes_maq[k] for k in keys_vis]
+    cores_vis  = [cores_maq[k] for k in keys_vis]
+
+    # --- Gráfico 1: Custo total/kg e composição (barras empilhadas) ---
+    st.markdown("#### 1) Composição do Custo Total por kg")
+    st.caption("Quanto é matéria-prima e quanto são outros custos (depreciação, MO, energia, indiretos)")
+
+    fig_comp = go.Figure()
+    fig_comp.add_trace(go.Bar(
+        name="Matéria-Prima",
+        x=nomes_vis,
+        y=[resultados[k]["custo_mp_kg"] for k in keys_vis],
+        marker_color="#3b82f6",
+        text=[f"USD {resultados[k]['custo_mp_kg']:.4f}" for k in keys_vis],
+        textposition="inside",
+    ))
+    fig_comp.add_trace(go.Bar(
+        name="Outros Custos",
+        x=nomes_vis,
+        y=[resultados[k]["custo_outros_kg"] for k in keys_vis],
+        marker_color="#f59e0b",
+        text=[f"USD {resultados[k]['custo_outros_kg']:.4f}" for k in keys_vis],
+        textposition="inside",
+    ))
+    fig_comp.update_layout(
+        barmode="stack",
+        paper_bgcolor="#0e1117", plot_bgcolor="#1e2130",
+        font_color="white", height=400,
+        yaxis=dict(title="USD/kg", gridcolor="#334155"),
+        xaxis=dict(gridcolor="#334155"),
+        legend=dict(bgcolor="#1e2130", bordercolor="#334155"),
+    )
+    st.plotly_chart(fig_comp, use_container_width=True)
+
+    # --- Gráfico 2: Ganho/ano (barras simples) ---
+    st.markdown("#### 2) Ganho Anual por Máquina (USD/ano)")
+    st.caption("Quanto cada máquina gera de lucro por ano")
+
+    fig_ganho = go.Figure()
+    for k in keys_vis:
+        fig_ganho.add_trace(go.Bar(
+            name=nomes_maq[k],
+            x=[nomes_maq[k]],
+            y=[resultados[k]["ganho_ano"]],
+            marker_color=cores_maq[k],
+            text=[f"USD {resultados[k]['ganho_ano']:,.0f}"],
+            textposition="outside",
+        ))
+    fig_ganho.update_layout(
+        paper_bgcolor="#0e1117", plot_bgcolor="#1e2130",
+        font_color="white", height=400,
+        yaxis=dict(title="USD/ano", gridcolor="#334155"),
+        xaxis=dict(gridcolor="#334155"),
+        showlegend=False,
+    )
+    st.plotly_chart(fig_ganho, use_container_width=True)
+
+    # --- Gráfico 3: Payback (barras + linha de referência) ---
+    st.markdown("#### 3) Payback – Recuperação do Investimento (anos)")
+    st.caption("Tempo para pagar a máquina. Quanto menor, melhor.")
+
+    fig_pb = go.Figure()
+    fig_pb.add_trace(go.Bar(
+        name=f"Payback ({pct_lucro_payback:.0f}% lucro)",
+        x=nomes_vis,
+        y=[resultados[k]["payback_anos_pct"] for k in keys_vis],
+        marker_color=cores_vis,
+        text=[f"{resultados[k]['payback_anos_pct']:.2f} anos" for k in keys_vis],
+        textposition="outside",
+    ))
+    fig_pb.add_trace(go.Scatter(
+        name="Payback (100% lucro)",
+        x=nomes_vis,
+        y=[resultados[k]["payback_anos"] for k in keys_vis],
+        mode="lines+markers+text",
+        line=dict(color="white", width=2, dash="dash"),
+        marker=dict(size=10, color="white"),
+        text=[f"{resultados[k]['payback_anos']:.2f}" for k in keys_vis],
+        textposition="top center",
+        textfont=dict(color="white"),
+    ))
+    fig_pb.update_layout(
+        paper_bgcolor="#0e1117", plot_bgcolor="#1e2130",
+        font_color="white", height=400,
+        yaxis=dict(title="Anos", gridcolor="#334155"),
+        xaxis=dict(gridcolor="#334155"),
+        legend=dict(bgcolor="#1e2130", bordercolor="#334155"),
+    )
+    st.plotly_chart(fig_pb, use_container_width=True)
+
+    # --- Gráfico 4: Produção anual (barras) ---
+    st.markdown("#### 4) Capacidade de Produção Anual (kg/ano)")
+
+    fig_prod = go.Figure()
+    for k in keys_vis:
+        fig_prod.add_trace(go.Bar(
+            name=nomes_maq[k],
+            x=[nomes_maq[k]],
+            y=[resultados[k]["prod_kg_ano"]],
+            marker_color=cores_maq[k],
+            text=[f"{resultados[k]['prod_kg_ano']:,.0f} kg"],
+            textposition="outside",
+        ))
+    fig_prod.update_layout(
+        paper_bgcolor="#0e1117", plot_bgcolor="#1e2130",
+        font_color="white", height=400,
+        yaxis=dict(title="kg/ano", gridcolor="#334155"),
+        showlegend=False,
+    )
+    st.plotly_chart(fig_prod, use_container_width=True)
+
+    # --- Gráfico 5: Custo/kg vs Ganho/kg (scatter) ---
+    st.markdown("#### 5) Custo x Ganho por kg")
+    st.caption("Posição ideal: menor custo e maior ganho (canto inferior direito)")
+
+    fig_scatter = go.Figure()
+    for k in keys_vis:
+        fig_scatter.add_trace(go.Scatter(
+            x=[resultados[k]["custo_total_kg"]],
+            y=[resultados[k]["ganho_kg"]],
+            mode="markers+text",
+            name=nomes_maq[k],
+            marker=dict(size=30, color=cores_maq[k], opacity=0.85),
+            text=[nomes_maq[k]],
+            textposition="top center",
+        ))
+    fig_scatter.update_layout(
+        paper_bgcolor="#0e1117", plot_bgcolor="#1e2130",
+        font_color="white", height=450,
+        xaxis=dict(title="Custo Total (USD/kg)", gridcolor="#334155"),
+        yaxis=dict(title="Ganho (USD/kg)", gridcolor="#334155"),
+        legend=dict(bgcolor="#1e2130", bordercolor="#334155"),
+    )
+    st.plotly_chart(fig_scatter, use_container_width=True)
+
+    # =====================================================================
+    # TABELA DETALHADA (conferência com o Excel)
+    # =====================================================================
+    st.markdown("---")
+    st.markdown("### 📋 Tabela Detalhada (conferência com o Excel)")
+
+    linhas = []
+    for key in keys_vis:
+        r = resultados[key]
+        p = params_op[key]
+        linhas.append({
+            "Máquina":                         nomes_maq[key],
+            "Custo MP/kg (USD)":               r["custo_mp_kg"],
+            "Outros custos/kg (USD)":          r["custo_outros_kg"],
+            "Custo Total/kg (USD)":            r["custo_total_kg"],
+            "Custo Total/ton (USD)":           r["custo_total_ton"],
+            "Produção kg/dia":                 r["prod_kg_dia"],
+            "Produção kg/mês":                 r["prod_kg_mes"],
+            "Produção kg/ano":                 r["prod_kg_ano"],
+            "Depreciação/mês (USD)":           r["dep_mes"],
+            "MO/mês (USD)":                    r["custo_mo_mes"],
+            "Energia/kg (USD)":                r["custo_ee_kg"],
+            "Energia/mês (USD)":               r["custo_ee_mes"],
+            "Outros indiretos/mês (USD)":      r["outros_mes"],
+            "Ganho/kg (USD)":                  r["ganho_kg"],
+            "Ganho/ano (USD)":                 r["ganho_ano"],
+            "Payback 100% lucro (anos)":       r["payback_anos"],
+            f"Payback {pct_lucro_payback:.0f}% lucro (anos)": r["payback_anos_pct"],
+        })
+
+    df_tab = pd.DataFrame(linhas)
+    st.dataframe(
+        df_tab.style.format({
+            "Custo MP/kg (USD)":               "{:.4f}",
+            "Outros custos/kg (USD)":          "{:.4f}",
+            "Custo Total/kg (USD)":            "{:.4f}",
+            "Custo Total/ton (USD)":           "{:.2f}",
+            "Produção kg/dia":                 "{:,.0f}",
+            "Produção kg/mês":                 "{:,.0f}",
+            "Produção kg/ano":                 "{:,.0f}",
+            "Depreciação/mês (USD)":           "{:,.2f}",
+            "MO/mês (USD)":                    "{:,.2f}",
+            "Energia/kg (USD)":                "{:.6f}",
+            "Energia/mês (USD)":               "{:,.2f}",
+            "Outros indiretos/mês (USD)":      "{:,.2f}",
+            "Ganho/kg (USD)":                  "{:.4f}",
+            "Ganho/ano (USD)":                 "{:,.0f}",
+            "Payback 100% lucro (anos)":       "{:.3f}",
+        }),
+        use_container_width=True,
+    )
+    st.# =====================================================================
 # MÓDULO 3 - CONTAS PARA IMPORTAÇÃO (VERSÃO INICIAL)
 # =====================================================================
 def show_importacao():
