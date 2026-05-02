@@ -444,6 +444,175 @@ def show_inpack():
     fig_bar.update_xaxes(showgrid=False)
     fig_bar.update_yaxes(gridcolor="#333")
     st.plotly_chart(fig_bar, use_container_width=True)
+        # =========================================================
+    # PAINEL DE DIFERENCIAIS — "Onde a In.Pack se destaca"
+    # Só mostra métricas onde In.Pack tem vantagem real
+    # =========================================================
+    st.markdown("---")
+    st.markdown("## 🏆 Onde a In.Pack se Destaca")
+    st.caption(
+        "Exibe apenas os indicadores onde a In.Pack tem vantagem significativa. "
+        "Métricas onde a diferença é pequena são automaticamente ocultadas."
+    )
+
+    # --- Limiares mínimos de relevância (editáveis pelo usuário) ---
+    with st.expander("⚙️ Ajustar sensibilidade dos filtros"):
+        col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+        with col_f1:
+            lim_lucro = st.number_input(
+                "Δ Lucro/ano mínimo (€)",
+                value=5000.0, step=1000.0, key="lim_lucro"
+            )
+        with col_f2:
+            lim_prod = st.number_input(
+                "Δ Produção/mês mínima (kg)",
+                value=500.0, step=100.0, key="lim_prod"
+            )
+        with col_f3:
+            lim_conv = st.number_input(
+                "Δ Custo conversão/kg mínimo (€)",
+                value=0.005, step=0.001, format="%.3f", key="lim_conv"
+            )
+        with col_f4:
+            lim_ee = st.number_input(
+                "Δ Custo energia/mês mínimo (€)",
+                value=100.0, step=50.0, key="lim_ee"
+            )
+
+    # --- Referência: In.Pack vs cada cenário ---
+    # Para cada métrica, calcula o delta In.Pack - concorrente
+    # Só mostra se o delta superar o limiar
+
+    comparacoes = {
+        "Cliente": {"label": "vs Máq. do Cliente", "cor": "#ef4444"},
+        "Equip":   {"label": "vs Equiparação",     "cor": "#22c55e"},
+    }
+
+    for comp_key, comp_info in comparacoes.items():
+        if comp_key not in keys_vis or "InPack" not in keys_vis:
+            continue
+
+        r_ip   = r["InPack"]
+        r_comp = r[comp_key]
+        cor_comp = comp_info["cor"]
+
+        # Calcula deltas
+        delta_lucro = r_ip["lucro_liq"]  - r_comp["lucro_liq"]
+        delta_prod  = r_ip["kg_mes"]     - r_comp["kg_mes"]
+        delta_conv  = r_comp["conv_kg"]  - r_ip["conv_kg"]   # positivo = InPack é mais barato
+        delta_ee    = r_comp["ee_mes"]   - r_ip["ee_mes"]    # positivo = InPack consome menos
+
+        # Filtra só os que passam no limiar
+        destaques = []
+
+        if delta_lucro > lim_lucro:
+            destaques.append({
+                "label": "Ganho adicional de lucro/ano",
+                "valor": delta_lucro,
+                "formato": "€{:,.0f}",
+                "cor": "#22c55e",
+                "icon": "💰",
+                "descricao": f"In.Pack gera € {delta_lucro:,.0f} a mais por ano"
+            })
+
+        if delta_prod > lim_prod:
+            destaques.append({
+                "label": "Aumento de produção/mês",
+                "valor": delta_prod,
+                "formato": "{:,.0f} kg",
+                "cor": "#3b82f6",
+                "icon": "🏭",
+                "descricao": f"In.Pack produz {delta_prod:,.0f} kg a mais por mês"
+            })
+
+        if delta_conv > lim_conv:
+            destaques.append({
+                "label": "Redução de custo de conversão/kg",
+                "valor": delta_conv,
+                "formato": "€{:.4f}",
+                "cor": "#f59e0b",
+                "icon": "⚡",
+                "descricao": f"In.Pack custa € {delta_conv:.4f} a menos por kg produzido"
+            })
+
+        if delta_ee > lim_ee:
+            destaques.append({
+                "label": "Economia de energia/mês",
+                "valor": delta_ee,
+                "formato": "€{:,.0f}",
+                "cor": "#8b5cf6",
+                "icon": "🔌",
+                "descricao": f"In.Pack economiza € {delta_ee:,.0f} em energia por mês"
+            })
+
+        # --- Exibe os resultados ---
+        st.markdown(f"### In.Pack {comp_info['label']}")
+
+        if not destaques:
+            st.info(
+                f"Neste cenário a diferença entre In.Pack e {comp_info['label'].replace('vs ', '')} "
+                "é pequena nos indicadores configurados. Ajuste os parâmetros ou a sensibilidade dos filtros."
+            )
+            continue
+
+        # Cards de destaque
+        ncols = min(len(destaques), 4)
+        dest_cols = st.columns(ncols)
+        for col, d in zip(dest_cols, destaques):
+            with col:
+                valor_fmt = d["formato"].format(d["valor"])
+                st.markdown(f"""
+<div style="background:linear-gradient(135deg,#1e293b,#020617);
+            border-radius:12px; padding:16px 14px;
+            border-left:5px solid {d['cor']};
+            box-shadow:0 4px 15px rgba(0,0,0,0.3);
+            margin-bottom:8px;">
+  <div style="font-size:22px; margin-bottom:4px;">{d['icon']}</div>
+  <div style="color:#94a3b8; font-size:12px; margin-bottom:4px;">{d['label']}</div>
+  <div style="color:{d['cor']}; font-weight:700; font-size:20px; margin-bottom:6px;">{valor_fmt}</div>
+  <div style="color:#e5e7eb; font-size:11px;">{d['descricao']}</div>
+</div>
+""", unsafe_allow_html=True)
+
+        # Gráfico de barras dos diferenciais — só os que passaram no filtro
+        if len(destaques) > 0:
+            labels_graf  = [d["icon"] + " " + d["label"] for d in destaques]
+            valores_graf = [d["valor"] for d in destaques]
+            cores_graf   = [d["cor"] for d in destaques]
+
+            # Normaliza para % do maior valor (facilita comparação visual)
+            max_val = max(valores_graf) if max(valores_graf) > 0 else 1
+            pct_graf = [v / max_val * 100 for v in valores_graf]
+
+            fig_dest = go.Figure()
+            fig_dest.add_trace(go.Bar(
+                x=labels_graf,
+                y=pct_graf,
+                marker_color=cores_graf,
+                text=[
+                    d["formato"].format(d["valor"]) for d in destaques
+                ],
+                textposition="outside",
+                textfont=dict(color="white", size=13),
+            ))
+            fig_dest.update_layout(
+                paper_bgcolor="#0e1117", plot_bgcolor="#1e2130",
+                font_color="white", height=380,
+                title=dict(
+                    text=f"Vantagens reais da In.Pack {comp_info['label']}",
+                    font=dict(color="white", size=14)
+                ),
+                yaxis=dict(
+                    title="Intensidade do diferencial (%)",
+                    gridcolor="#334155",
+                    range=[0, 130],
+                ),
+                xaxis=dict(gridcolor="#334155"),
+                showlegend=False,
+            )
+            st.plotly_chart(fig_dest, use_container_width=True)
+
+        st.markdown("---")
 
     # ---- FLUXO DE CAIXA ACUMULADO ----
     st.markdown("## Fluxo de Caixa Acumulado — 0 a 10 anos")
