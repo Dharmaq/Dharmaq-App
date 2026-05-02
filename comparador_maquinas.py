@@ -101,7 +101,7 @@ def show_top_menu():
         if st.button("In.Pack", key="btn_inpack"):
             go_to("inpack")
     with cols[2]:
-        if st.button("Carnevalli , key="btn_carnevalli"):
+        if st.button("Carnevalli", key="btn_carnevalli"):
             go_to("carnevalli")
     with cols[3]:
         if st.button("Contas para Importação", key="btn_import"):
