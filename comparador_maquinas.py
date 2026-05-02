@@ -66,7 +66,7 @@ def show_home():
 Use este painel para comparar cenários reais de produção e investimento:
 
 - **In.Pack** – simulação completa de máquina multivias vs máquina atual vs cenário de equiparação  
-- **Carnevalli** – módulo específico para extrusoras e filmes (em breve)  
+- **Carnevalli** – módulo específico para extrusoras e coextrusoras  
 - **Contas para Importação** – cálculo do custo final da máquina no Brasil, com câmbio e impostos
 
 Escolha abaixo qual módulo deseja abrir.
@@ -101,7 +101,7 @@ def show_top_menu():
         if st.button("In.Pack", key="btn_inpack"):
             go_to("inpack")
     with cols[2]:
-        if st.button("Carnevalli (em breve)", key="btn_carnevalli"):
+        if st.button("Carnevalli , key="btn_carnevalli"):
             go_to("carnevalli")
     with cols[3]:
         if st.button("Contas para Importação", key="btn_import"):
